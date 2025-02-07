@@ -36,18 +36,17 @@ def calcular_fractal(x_min, x_max, y_min, y_max, ancho, alto, iteraciones_max):
 
 # Endpoint para generar el fractal a partir de la diagonal ingresada
 @app.post("/generar")
-async def generar_fractal(diagonal: float = Form(...)):
+async def generar_fractal(diagonal: float = Form(...), iteraciones: int = Form(...)):
     # Para una imagen cuadrada, el lado se obtiene dividiendo la diagonal entre √2.
     side = int(float(diagonal) / sqrt(2))
     ancho = side
     alto = side
 
     # Definir una región fija del plano complejo para generar el fractal.
-    # Puedes modificar estos valores según la región deseada.
     x_min, x_max = -2, 1      # Ancho del plano: 3
     y_min, y_max = -1.5, 1.5    # Alto del plano: 3
 
-    datos_fractal = calcular_fractal(x_min, x_max, y_min, y_max, ancho, alto, iteraciones_max=100)
+    datos_fractal = calcular_fractal(x_min, x_max, y_min, y_max, ancho, alto, iteraciones_max=iteraciones)
     
     # El tamaño de la figura se define en pulgadas: (ancho/dpi, alto/dpi)
     dpi = 100

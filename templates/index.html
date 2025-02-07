@@ -20,6 +20,7 @@
       background: rgba(0, 0, 0, 0.6);
       padding: 10px;
       border-radius: 5px;
+      width: 300px; /* Ancho reducido */
     }
     #controls label,
     #controls input,
@@ -27,9 +28,9 @@
       font-size: 16px;
     }
     #controls input {
-      width: 100px;
+      width: 100%; /* El ancho de los inputs se ajusta al 100% del contenedor */
       padding: 4px;
-      margin-right: 5px;
+      margin-bottom: 10px; /* Espaciado entre los campos */
     }
     #zoom-controls {
       margin-top: 10px;
@@ -42,12 +43,11 @@
     }
     #loading {
       position: fixed;
-      top: 20px;
-      right: 20px;
-      color: white;
-      font-family: Arial, sans-serif;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       display: none;
-      z-index: 10;
+      z-index: 20; /* Asegura que esté encima de los demás elementos */
     }
     #fractal-container {
       width: 100vw;
@@ -70,6 +70,10 @@
     <form id="diagonalForm">
       <label for="diagonal">Diagonal (px):</label>
       <input type="number" id="diagonal" name="diagonal" required min="1" placeholder="Ej: 1000">
+      
+      <label for="iteraciones">Iteraciones:</label>
+      <input type="number" id="iteraciones" name="iteraciones" required min="1" value="100">
+      
       <button type="submit">Generar Fractal</button>
     </form>
     <p>Coordenadas: X = <span id="coordX">-</span>, Y = <span id="coordY">-</span></p>
@@ -79,10 +83,12 @@
     </div>
   </div>
   
-  <div id="loading">Generando fractal...</div>
+  <div id="loading">
+    <img src="static/loading-cat.gif" alt="Cargando..." />
+  </div>
   
   <div id="fractal-container">
-    <img id="fractal" src="../static/fractal.png" alt="fractal">
+    <img id="fractal" src="static/fractal.png" alt="fractal">
   </div>
 
   <script>
@@ -92,22 +98,54 @@
     const coordY = document.getElementById("coordY");
     const zoomInBtn = document.getElementById("zoom-in");
     const zoomOutBtn = document.getElementById("zoom-out");
+    const loadingDiv = document.getElementById("loading");
     let zoomLevel = 1;
     let originX = "center", originY = "center";
 
+    // Función para mostrar el GIF de carga
+    function showLoading() {
+      loadingDiv.style.display = "block";
+    }
+
+    // Función para ocultar el GIF de carga
+    function hideLoading() {
+      loadingDiv.style.display = "none";
+    }
+
+    // Función para aplicar el zoom y mostrar el GIF de carga
+    function applyZoom(factor) {
+      showLoading();
+      setTimeout(() => {
+        zoomLevel *= factor;
+        zoomLevel = Math.max(1, Math.min(zoomLevel, 10)); // Límite entre 1x y 10x
+        
+        if (zoomLevel === 1 || zoomLevel === 10) {
+          alert("No se puede hacer más zoom");
+        } else {
+          fractalImg.style.transform = `scale(${zoomLevel})`;
+          fractalImg.style.transformOrigin = `${originX} ${originY}`;
+        }
+        hideLoading();
+      }, 1000); // Mostrar el GIF por 2 segundos mientras aplica el zoom
+    }
+
+    // Función para generar el fractal y mostrar el GIF de carga
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
+      showLoading();  // Mostrar el GIF cuando se empieza a generar el fractal
       try {
         const response = await fetch("/generar", { method: "POST", body: formData });
         if (response.ok) {
-          fractalImg.src = "../static/fractal.png?" + new Date().getTime();
+          fractalImg.src = "static/fractal.png?" + new Date().getTime();
           zoomLevel = 1;
           fractalImg.style.transform = `scale(${zoomLevel})`;
           fractalImg.style.transformOrigin = "center center";
         }
       } catch (error) {
         console.error("Error al generar el fractal", error);
+      } finally {
+        hideLoading(); // Ocultar el GIF una vez que el proceso termine
       }
     });
 
@@ -121,13 +159,6 @@
       coordX.textContent = clickX.toFixed(2);
       coordY.textContent = clickY.toFixed(2);
     });
-
-    function applyZoom(factor) {
-      zoomLevel *= factor;
-      zoomLevel = Math.max(1, Math.min(zoomLevel, 10)); // Límite entre 1x y 10x
-      fractalImg.style.transform = `scale(${zoomLevel})`;
-      fractalImg.style.transformOrigin = `${originX} ${originY}`;
-    }
 
     zoomInBtn.addEventListener("click", () => applyZoom(1.5));
     zoomOutBtn.addEventListener("click", () => applyZoom(0.67));
