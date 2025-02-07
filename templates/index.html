@@ -1,221 +1,136 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Fractales</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-
-        h1 {
-            text-align: center;
-            margin-top: 20px;
-            color: #4A90E2;
-        }
-
-        form {
-            width: 50%;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        label {
-            display: block;
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: #4A90E2;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #357ABD;
-        }
-
-        .container {
-            text-align: center;
-        }
-
-        #image-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-            overflow: hidden; /* Restringe el área visible */
-            width: 80%;
-            height: 70vh;
-            margin: auto;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            background-color: #ffffff;
-        }
-
-        #fractal {
-            max-width: 100%;
-            max-height: 100%;
-            cursor: grab;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generar Fractal con Diagonal</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+    #controls {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 5px;
+    }
+    #controls label,
+    #controls input,
+    #controls button {
+      font-size: 16px;
+    }
+    #controls input {
+      width: 100px;
+      padding: 4px;
+      margin-right: 5px;
+    }
+    #zoom-controls {
+      margin-top: 10px;
+    }
+    #zoom-controls button {
+      font-size: 18px;
+      padding: 5px 10px;
+      margin-right: 5px;
+      cursor: pointer;
+    }
+    #loading {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: none;
+      z-index: 10;
+    }
+    #fractal-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #fractal {
+      max-width: 100%;
+      max-height: 100%;
+      cursor: crosshair;
+      transform-origin: center;
+      transition: transform 0.3s ease;
+    }
+  </style>
 </head>
 <body>
-    <h1>Generador de Fractales</h1>
-    <form action="/generar" method="post">
-        <label for="x_min">x_min:</label>
-        <input type="number" id="x_min" name="x_min" step="0.01" value="">
-
-        <label for="x_max">x_max:</label>
-        <input type="number" id="x_max" name="x_max" step="0.01" value="">
-
-        <label for="y_min">y_min:</label>
-        <input type="number" id="y_min" name="y_min" step="0.01" value="">
-
-        <label for="y_max">y_max:</label>
-        <input type="number" id="y_max" name="y_max" step="0.01" value="">
-
-        <label for="ancho">Ancho (px):</label>
-        <input type="number" id="ancho" name="ancho" value="">
-
-        <label for="alto">Alto (px):</label>
-        <input type="number" id="alto" name="alto" value="">
-
-        <label for="iteraciones_max">Iteraciones máximas:</label>
-        <input type="number" id="iteraciones_max" name="iteraciones_max" value="">
-
-        <button type="submit">Visualizar</button>
+  <div id="controls">
+    <form id="diagonalForm">
+      <label for="diagonal">Diagonal (px):</label>
+      <input type="number" id="diagonal" name="diagonal" required min="1" placeholder="Ej: 1000">
+      <button type="submit">Generar Fractal</button>
     </form>
-
-    <div class="container">
-        <div id="image-container">
-            <img id="fractal" src="/static/fractal.png" alt="Fractal generado">
-        </div>
+    <p>Coordenadas: X = <span id="coordX">-</span>, Y = <span id="coordY">-</span></p>
+    <div id="zoom-controls">
+      <button id="zoom-in">+</button>
+      <button id="zoom-out">-</button>
     </div>
+  </div>
+  
+  <div id="loading">Generando fractal...</div>
+  
+  <div id="fractal-container">
+    <img id="fractal" src="../static/fractal.png" alt="fractal">
+  </div>
 
-    <script>
-        const fractalImage = document.getElementById("fractal");
-        const imageContainer = document.getElementById("image-container");
+  <script>
+    const form = document.getElementById("diagonalForm");
+    const fractalImg = document.getElementById("fractal");
+    const coordX = document.getElementById("coordX");
+    const coordY = document.getElementById("coordY");
+    const zoomInBtn = document.getElementById("zoom-in");
+    const zoomOutBtn = document.getElementById("zoom-out");
+    let zoomLevel = 1;
+    let originX = "center", originY = "center";
 
-        let scale = 1; // Escala inicial
-        let translateX = 0; // Desplazamiento horizontal
-        let translateY = 0; // Desplazamiento vertical
-        let isDragging = false; // Estado de arrastre
-        let cursorState = "grab"; // Estado inicial del cursor (grab)
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      try {
+        const response = await fetch("/generar", { method: "POST", body: formData });
+        if (response.ok) {
+          fractalImg.src = "../static/fractal.png?" + new Date().getTime();
+          zoomLevel = 1;
+          fractalImg.style.transform = `scale(${zoomLevel})`;
+          fractalImg.style.transformOrigin = "center center";
+        }
+      } catch (error) {
+        console.error("Error al generar el fractal", error);
+      }
+    });
 
-        // Ajustar la escala con scroll
-        fractalImage.addEventListener("wheel", (event) => {
-            event.preventDefault();
+    fractalImg.addEventListener("click", (event) => {
+      const rect = fractalImg.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const clickY = event.clientY - rect.top;
+      originX = `${(clickX / rect.width) * 100}%`;
+      originY = `${(clickY / rect.height) * 100}%`;
+      fractalImg.style.transformOrigin = `${originX} ${originY}`;
+      coordX.textContent = clickX.toFixed(2);
+      coordY.textContent = clickY.toFixed(2);
+    });
 
-            const zoomSpeed = 0.05; // Velocidad de zoom
-            const rect = fractalImage.getBoundingClientRect();
+    function applyZoom(factor) {
+      zoomLevel *= factor;
+      zoomLevel = Math.max(1, Math.min(zoomLevel, 10)); // Límite entre 1x y 10x
+      fractalImg.style.transform = `scale(${zoomLevel})`;
+      fractalImg.style.transformOrigin = `${originX} ${originY}`;
+    }
 
-            // Calcular el punto del zoom en relación con el mouse
-            const mouseX = event.clientX - rect.left;
-            const mouseY = event.clientY - rect.top;
-            const zoomIn = event.deltaY < 0;
-
-            // Calcular la nueva escala
-            const prevScale = scale;
-            scale = zoomIn ? scale * (1 + zoomSpeed) : scale / (1 + zoomSpeed);
-
-            // Mantener el zoom fluido y no permitir que sea menor que 1
-            scale = Math.max(1, scale);
-
-            // Ajustar la posición para mantener el punto central del zoom
-            translateX -= (mouseX - translateX) * (scale / prevScale - 1);
-            translateY -= (mouseY - translateY) * (scale / prevScale - 1);
-
-            // Restringir el desplazamiento de la imagen para que no se salga del área visible
-            const maxTranslateX = (scale - 1) * fractalImage.width / 2;
-            const maxTranslateY = (scale - 1) * fractalImage.height / 2;
-
-            translateX = Math.min(Math.max(translateX, -maxTranslateX), maxTranslateX);
-            translateY = Math.min(Math.max(translateY, -maxTranslateY), maxTranslateY);
-
-            // Aplicar la transformación
-            fractalImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        });
-
-        // Manejo de arrastre (pan)
-        let lastX = 0;
-        let lastY = 0;
-
-        fractalImage.addEventListener("mousedown", (event) => {
-            // Alternar el estado del cursor con cada clic
-            if (cursorState === "grab") {
-                cursorState = "grabbing";
-                isDragging = true;
-                lastX = event.clientX;
-                lastY = event.clientY;
-                fractalImage.style.cursor = "grabbing"; // Cambia a "grabbing"
-            } else {
-                cursorState = "grab";
-                isDragging = false;
-                fractalImage.style.cursor = "grab"; // Cambia a "grab"
-            }
-        });
-
-        window.addEventListener("mousemove", (event) => {
-            if (isDragging) {
-                const dx = event.clientX - lastX;
-                const dy = event.clientY - lastY;
-
-                translateX += dx;
-                translateY += dy;
-
-                // Restringir el movimiento para que la imagen no se salga del contenedor
-                const maxTranslateX = (scale - 1) * fractalImage.width / 2;
-                const maxTranslateY = (scale - 1) * fractalImage.height / 2;
-
-                translateX = Math.min(Math.max(translateX, -maxTranslateX), maxTranslateX);
-                translateY = Math.min(Math.max(translateY, -maxTranslateY), maxTranslateY);
-
-                fractalImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-
-                lastX = event.clientX;
-                lastY = event.clientY;
-            }
-        });
-
-        window.addEventListener("mouseup", () => {
-            if (cursorState === "grabbing") {
-                isDragging = false;
-                fractalImage.style.cursor = "grab"; // Cambia a "grab" cuando sueltas el click
-            }
-        });
-
-        fractalImage.addEventListener("mouseleave", () => {
-            if (isDragging && cursorState === "grabbing") {
-                isDragging = false;
-                fractalImage.style.cursor = "grab"; // Cambia a "grab" si el ratón sale del área de la imagen
-            }
-        });
-    </script>
+    zoomInBtn.addEventListener("click", () => applyZoom(1.5));
+    zoomOutBtn.addEventListener("click", () => applyZoom(0.67));
+  </script>
 </body>
 </html>
